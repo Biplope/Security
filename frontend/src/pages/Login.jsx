@@ -33,34 +33,32 @@ const Login = () => {
         // api call
         loginApi(data)
             .then((res) => {
-                if (res.data.success == false) {
+                console.log(res.data); // Log the entire response for debugging
+                if (res.data.success === false) {
                     toast.error(res.data.message);
                 } else {
                     toast.success(res.data.message);
-                    // set token and user data in local storage
+                    // Set token and user data in local storage
                     localStorage.setItem("token", res.data.token);
 
-                    // Check if user is admin
                     const isAdmin = res.data.isAdmin;
 
                     // Redirect based on admin status
                     if (isAdmin) {
-                        // Redirect to admin dashboard
                         navigate("/admin/dashboard");
                     } else {
-                        // Redirect to user dashboard
                         navigate("/user/dashboard");
                     }
 
-                    // Converting incomming json
                     const convertedJson = JSON.stringify(res.data.userData);
                     localStorage.setItem("user", convertedJson);
                 }
             })
             .catch((err) => {
-                console.log(err);
-                toast.error("Server Error!");
+                console.log("Error from API call:", err.response?.data?.message || err.message);
+                toast.error(err.response?.data?.message || "Server Error!");
             });
+
     };
 
     return (

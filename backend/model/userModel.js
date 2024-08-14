@@ -38,11 +38,11 @@ const userSchema = mongoose.Schema({
     required: false,
   },
   ////
-  confirmPassword: {
-    type: String,
-    required: true,
-  },
-  failedLoginAttempts: {
+  // confirmPassword: {
+  //   type: String,
+  //   required: true,
+  // },
+  failedLoginAttempts:   {
     type: Number,
     default: 0,
   },

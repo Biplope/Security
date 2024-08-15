@@ -6,56 +6,152 @@ const ResetCode = require("../model/resetCodeModel");
 const cloudinary = require("cloudinary");
 
 const createUser = async (req, res) => {
-  // step 1 : Check if data is coming or not
-  console.log(req.body);
+    // Step 1: Check if data is coming or not
+    console.log(req.body);
 
-  // step 2 : Destructure the data
-  const { firstName, lastName, email, password, confirmPassword } = req.body;
+    // Step 2: Destructure the data
+    const { firstName, lastName, email, password, confirmPassword } = req.body;
 
-  // step 3 : validate the incomming data
-  if (!firstName || !lastName || !email || !password || !confirmPassword) {
-    return res.json({
-      success: false,
-      message: "Please enter all the fields.",
-    });
-  }
-
-  // step 4 : try catch block
-  try {
-    // step 5 : Check existing user
-    const existingUser = await Users.findOne({ email: email });
-    if (existingUser) {
-      return res.json({
-        success: false,
-        message: "User already exists.",
-      });
+    // Step 3: Validate the incoming data
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
+        return res.status(400).json({
+            success: false,
+            message: "Please enter all the fields."
+        });
     }
-    23;
-    // password encryption
-    const randomSalt = await bcrypt.genSalt(10);
-    const encryptedPassword = await bcrypt.hash(password, randomSalt);
 
-    // step 6 : create new user
-    const newUser = new Users({
-      // fieldname : incomming data name
-      firstName: firstName,
-      lastName: lastName,
-      email: email,
-      password: encryptedPassword,
-      confirmPassword: confirmPassword,
-    });
+    // Email Validation: Check if the email is in a valid format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: "Invalid email format" });
+    }
 
-    // step 7 : save user and response
-    await newUser.save();
-    res.status(200).json({
-      success: true,
-      message: "User created successfully.",
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json("Server Error");
-  }
+    // Password Complexity: Require passwords to include a combination of Uppercase letters, Lowercase letters, Numbers, Special characters
+    const passwordRegex =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/;
+    if (!passwordRegex.test(password)) {
+        return res.status(400).json({
+            error: "Password must include a combination of: Uppercase letters, Lowercase letters, Numbers, Special characters (e.g.,!, @, #, $)"
+        });
+    }
+
+    const minPasswordLength = 8;
+    if (password.length < minPasswordLength) {
+        return res.status(400).json({
+            error: `Password length must be at least ${minPasswordLength} characters`
+        });
+    }
+
+    // Confirm Password Validation: Check if the passwords match
+    if (password !== confirmPassword) {
+        return res.status(400).json({
+            error: "Passwords do not match."
+        });
+    }
+
+    // Step 4: Try-catch block
+    try {
+        // Step 5: Check existing user
+        const existingUserByEmail = await User.findOne({ email: email });
+        if (existingUserByEmail) {
+            return res.status(400).json({
+                success: false,
+                message: "User with this email already exists."
+            });
+        }
+
+        // const existingUserByUsername = await User.findOne({ username: username });
+        // if (existingUserByUsername) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: "Username is already taken."
+        //     });
+        // }
+
+        // Password encryption
+        const randomSalt = await bcrypt.genSalt(10);
+        const encryptedPassword = await bcrypt.hash(password, randomSalt);
+
+        // Step 6: Create new user
+        const newUser = new User({
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            password: encryptedPassword,
+            confirmPassword: encryptedPassword,
+
+        });
+
+        // Update password history for the newly registered user
+        newUser.passwordHistory = [encryptedPassword];
+        // Trim the password history to a specific depth (e.g., last 5 passwords)
+        const passwordHistoryDepth = 5;
+        newUser.passwordHistory = newUser.passwordHistory.slice(-passwordHistoryDepth);
+
+        // Step 7: Save user and respond
+        await newUser.save();
+        res.status(201).json({
+            success: true,
+            message: "User created successfully."
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json("Server Error");
+    }
 };
+
+// const createUser = async (req, res) => {
+//   // step 1 : Check if data is coming or not
+//   console.log(req.body);
+
+//   // step 2 : Destructure the data
+//   const { firstName, lastName, email, password, confirmPassword } = req.body;
+
+//   // step 3 : validate the incomming data
+//   if (!firstName || !lastName || !email || !password || !confirmPassword) {
+//     return res.json({
+//       success: false,
+//       message: "Please enter all the fields.",
+//     });
+//   }
+
+//   // step 4 : try catch block
+//   try {
+//     // step 5 : Check existing user
+//     const existingUser = await Users.findOne({ email: email });
+//     if (existingUser) {
+//       return res.json({
+//         success: false,
+//         message: "User already exists.",
+//       });
+//     }
+//     23;
+//     // password encryption
+//     const randomSalt = await bcrypt.genSalt(10);
+//     const encryptedPassword = await bcrypt.hash(password, randomSalt);
+
+//     // step 6 : create new user
+//     const newUser = new Users({
+//       // fieldname : incomming data name
+//       firstName: firstName,
+//       lastName: lastName,
+//       email: email,
+//       password: encryptedPassword,
+//       confirmPassword: confirmPassword,
+//     });
+
+//     // step 7 : save user and response
+//     await newUser.save();
+//     res.status(200).json({
+//       success: true,
+//       message: "User created successfully.",
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     res.status(500).json("Server Error");
+//   }
+// };
 
 const loginUser = async (req, res) => {
   // step 1: Check incomming data

@@ -42,7 +42,7 @@ const userSchema = mongoose.Schema({
   //   type: String,
   //   required: true,
   // },
-  failedLoginAttempts:   {
+  failedLoginAttempts: {
     type: Number,
     default: 0,
   },
@@ -70,5 +70,5 @@ const userSchema = mongoose.Schema({
   ],
 });
 
-const Users = mongoose.model("users", userSchema);
-module.exports = Users;
+const User = mongoose.model("users", userSchema);
+module.exports = User;

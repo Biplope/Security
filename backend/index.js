@@ -43,6 +43,8 @@ app.get("/test", (req, res) => {
 
 // user routes
 app.use("/api/user", require("./routes/userRoutes"));
+//create route for offer
+app.use("/api/audit", require("./routes/auditRoutes"));
 
 //product routes
 app.use("/api/product", require("./routes/productRoutes"));
@@ -131,4 +133,4 @@ app.post("/forgot-password", (req, res) => {
     });
   });
 });
-module.exports=app
+

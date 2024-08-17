@@ -9,6 +9,7 @@ router.post("/create", userController.createUser);
 //login api
 router.post("/login", userController.loginUser);
 // router.post("/change_password", authGuard,userController.changePassword);
+router.post("/logout", userController.logoutUser);
 
 // router.get('/profile', authGuard,userController.getUserProfile);
 // router.put('/update_profile/:id', authGuard,userController.updateUserProfile);

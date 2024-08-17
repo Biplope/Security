@@ -35,6 +35,7 @@ import SendEmail from "./pages/resetpassword/SendEmail";
 // import Product from "./pages/Users/Products";
 import OrdersPage from "./pages/Orders";
 import FavoritesAndCart from "./pages/FavoritesAndCart";
+// import AdminAuditLogs from "../src/pages/Admin/Audit";
 function App() {
   return (
     <Router>
@@ -61,7 +62,8 @@ function App() {
         {/* <Route path="/user/products" element={<Product />} /> */}
         <Route path="/user/cart" element={<AddToCart />} />
         <Route path="/user/orders" element={<OrdersPage />} /> {/* </Route> */}
-        <Route path="/user/favorite" element={<FavoritesAndCart/>} />
+        <Route path="/user/favorite" element={<FavoritesAndCart />} />
+        {/* <Route path="/admin/audit_logs" element={<AdminAuditLogs />} /> */}
       </Routes>
     </Router>
   );

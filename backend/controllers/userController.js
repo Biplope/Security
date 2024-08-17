@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const { resetCode, mailConfig } = require("../utils/resetPassword");
 const ResetCode = require("../model/resetCodeModel");
 const cloudinary = require("cloudinary");
+const logActivity = require("../utils/logActivity");
 
 const createUser = async (req, res) => {
   // Step 1: Check if data is coming or not
@@ -23,7 +24,7 @@ const createUser = async (req, res) => {
   // Email Validation: Check if the email is in a valid format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    return res.status(400).json({ error: "Invalid email format" });
+    return res.status(400).json({ error: "Invalid email format" }); 
   }
 
   // Password Complexity: Require passwords to include a combination of Uppercase letters, Lowercase letters, Numbers, Special characters
@@ -61,11 +62,11 @@ const createUser = async (req, res) => {
       });
     }
 
-    // const existingUserByUsername = await User.findOne({ username: username });
-    // if (existingUserByUsername) {
+    // const existingUserByemail = await User.findOne({ email: email });
+    // if (existingUserByemail) {
     //     return res.status(400).json({
     //         success: false,
-    //         message: "Username is already taken."
+    //         message: "email is already taken."
     //     });
     // }
 
@@ -155,13 +156,10 @@ const createUser = async (req, res) => {
 // };
 
 const loginUser = async (req, res) => {
-  // step 1: Check incomming data
   console.log(req.body);
 
-  // destructuring
   const { email, password } = req.body;
 
-  // validation
   if (!email || !password) {
     return res.json({
       success: false,
@@ -169,24 +167,26 @@ const loginUser = async (req, res) => {
     });
   }
 
-  // try catch block
   try {
-    // finding user
     const user = await Users.findOne({ email: email });
     if (!user) {
+      logActivity(
+        `Failed login attempt: User with email ${email} does not exist`,
+        "login_failure",
+        email
+      );
       return res.json({
         success: false,
-        message: "User does not exists.",
+        message: "User does not exist.",
       });
     }
 
     // Check if account is locked
     if (user.accountLocked) {
       const lockoutDurationMillis = Date.now() - user.lastFailedLoginAttempt;
-      const lockoutDurationSeconds = lockoutDurationMillis / 1000; // convert to seconds
+      const lockoutDurationSeconds = lockoutDurationMillis / 1000;
 
       if (lockoutDurationSeconds >= 120) {
-        // 2 minutes in seconds
         // Unlock the account
         user.accountLocked = false;
         user.failedLoginAttempts = 0;
@@ -196,15 +196,22 @@ const loginUser = async (req, res) => {
         const minutes = Math.floor(timeRemainingSeconds / 60);
         const seconds = Math.floor(timeRemainingSeconds % 60);
 
+        logActivity(
+          `Account locked for user ${email}. Attempt to login during lockout period.`,
+          "login_failure",
+          user._id
+        );
+
         return res.status(400).json({
           success: false,
           message: `Account is locked. Please try again later after ${minutes} minutes and ${seconds} seconds.`,
         });
       }
     }
+
     // Check password expiry
     const checkPasswordExpiry = (user) => {
-      const passwordExpiryDays = 90; // Set the password expiry duration in days
+      const passwordExpiryDays = 90;
       const currentDate = new Date();
       const lastPasswordChangeDate = user.passwordChangeDate || user.createdAt;
 
@@ -216,6 +223,11 @@ const loginUser = async (req, res) => {
 
       if (daysRemaining <= 3 && daysRemaining > 0) {
         const message = `Your password will expire in ${daysRemaining} days. Please change your password.`;
+        logActivity(
+          `User ${email} password is expiring in ${daysRemaining} days.`,
+          "password_expiry_warning",
+          user._id
+        );
         return {
           expired: false,
           daysRemaining: daysRemaining,
@@ -229,24 +241,34 @@ const loginUser = async (req, res) => {
         message: null,
       };
     };
+
     // Compare password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      // Increment failed login attempts and update last failed login timestamp
       user.failedLoginAttempts += 1;
       user.lastFailedLoginAttempt = Date.now();
 
       // Check if the maximum allowed failed attempts is reached
       if (user.failedLoginAttempts >= 4) {
-        // Lock the account
         user.accountLocked = true;
         await user.save();
+        logActivity(
+          `Account locked due to multiple failed login attempts for user ${email}.`,
+          "account_locked",
+          user._id
+        );
         return res.json({
           success: false,
           message: "Account is locked. Please try again later.",
         });
       }
+
       await user.save();
+      logActivity(
+        `Failed login attempt due to incorrect password for user ${email}.`,
+        "login_failure",
+        user._id
+      );
       return res.json({
         success: false,
         message: "Incorrect Password.",
@@ -258,33 +280,31 @@ const loginUser = async (req, res) => {
     user.lastFailedLoginAttempt = null;
     await user.save();
 
-    // Check if the account is still locked after successful login
     if (user.accountLocked) {
+      logActivity(
+        `User ${email} attempted login while account was still locked.`,
+        "login_failure",
+        user._id
+      );
       return res.json({
         success: false,
         message: "Account is locked. Please try again later.",
       });
     }
 
-    // user exists:  {FirstName, LastName, Email, Password} user.password
-    // Comparing password
-    const databasePassword = user.password;
-    const isMatched = await bcrypt.compare(password, databasePassword);
-
-    if (!isMatched) {
-      return res.json({
-        success: false,
-        message: "Invalid Credentials.",
-      });
-    }
-
-    // create token
+    // Create token
     const token = jwt.sign(
       { id: user._id, isAdmin: user.isAdmin },
       process.env.JWT_SECRET
     );
 
-    // response
+    logActivity(
+      `User ${email} logged in successfully.`,
+      "login_success",
+      user._id
+    );
+
+    // Response
     res.status(200).json({
       success: true,
       message: "User logged in successfully.",
@@ -294,6 +314,11 @@ const loginUser = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
+    logActivity(
+      `Server error during login attempt for user ${email}.`,
+      "server_error",
+      email
+    );
     res.json({
       success: false,
       message: "Server Error",
@@ -607,6 +632,31 @@ const updatePassword = async (req, res) => {
   }
 };
 
+const logoutUser = (req, res) => {
+  try {
+    const email = req.user ? req.user.email : req.ip;
+    const userId = req.user
+      ? req.user.id
+      : req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+
+    // Log the logout activity
+    logActivity(`User logged out: ${email}`, "logout", userId);
+
+    // Respond with a success message
+    res.status(200).json({ message: "User logged out successfully" });
+  } catch (error) {
+    const email = req.user ? req.user.email : req.ip;
+    const userId = req.user
+      ? req.user.id
+      : req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+
+    // Log the logout failure
+    logActivity(`Logout failed: ${email}`, "logout_failure", userId);
+
+    res.status(500).json({ message: "Logout failed", error: error.message });
+  }
+};
+
 module.exports = {
   createUser,
   loginUser,
@@ -616,4 +666,5 @@ module.exports = {
   resetPassword,
   verifyResetCode,
   updatePassword,
+  logoutUser,
 };

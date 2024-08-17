@@ -85,3 +85,5 @@ export const addFavoriteApi = (data) => Api.post("/api/user/add_fav", data);
 export const getFavoritesApi = (id) => Api.get(`/api/user/get_fav/${id}`);
 export const removeFavoriteApi = (id) =>
     Api.delete(`/api/user/remove_fav/${id}`, config);
+    
+

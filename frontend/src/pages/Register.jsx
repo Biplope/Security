@@ -250,7 +250,7 @@ const Register = () => {
             lastName: lastName,
             email: email,
             password: password,
-            confirmPassword:confirmPassword,
+            confirmPassword: confirmPassword,
         };
 
         // Send data to backend
@@ -281,7 +281,7 @@ const Register = () => {
                                     <div class="row justify-content-center">
                                         <div class="col-md-10 col-lg-6 col-xl-5 order-2 order-lg-1">
 
-                                            <p class="text-center h1 fw-bold mb-5 mx-1 mx-md-4 mt-4">Registeration Form</p>
+                                            <p class="text-center h1 fw-bold mb-5 mx-1 mx-md-4 mt-4">Registeration Here!</p>
 
                                             <form class="mx-1 mx-md-4">
 
@@ -335,7 +335,7 @@ const Register = () => {
                                                     <i class="fas fa-lock fa-lg me-3 fa-fw"></i>
                                                     <div class="form-outline flex-fill">
 
-                                                        <label class="form-label" for="form3Example4c">Password</label>
+                                                        <label class="form-label" for="form3Example4c">Confirm Password</label>
                                                         <input onChange={changeConfirmPassword}
                                                             className="form-control"
                                                             type="password"
